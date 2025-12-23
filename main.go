@@ -2,7 +2,7 @@ package main
 
 import (
 	"cryptoPortfolio/clients/gecko"
-	"fmt"
+	"cryptoPortfolio/handler"
 	"log"
 	"os"
 
@@ -29,32 +29,9 @@ func main() {
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-
-	updates, err := bot.GetUpdatesChan(u)
-	if err != nil {
-		log.Panic(err)
-	}
-
 	geckoClient := gecko.NewClient(os.Getenv("COINGECKO_API"))
 
-	for update := range updates {
-		if update.Message != nil { // If we got a message
-			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+	botHandler := handler.New(bot, geckoClient)
 
-			res, err := geckoClient.Price(update.Message.Text)
-			if err != nil {
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Не смогли получить цену")
-				msg.ReplyToMessageID = update.Message.MessageID
-				bot.Send(msg)
-				continue
-			}
-
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("%v: %v", res.Name, res.Price))
-			msg.ReplyToMessageID = update.Message.MessageID
-
-			bot.Send(msg)
-		}
-	}
+	botHandler.Start()
 }
